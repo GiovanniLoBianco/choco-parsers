@@ -16,3 +16,4 @@ out/*
 */__pycache__/*
 
 dependency-reduced-pom.xml
+/target/
