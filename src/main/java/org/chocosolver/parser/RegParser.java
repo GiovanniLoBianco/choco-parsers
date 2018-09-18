@@ -9,6 +9,8 @@
 package org.chocosolver.parser;
 
 import gnu.trove.set.hash.THashSet;
+import version2.ChoiceGCC;
+import version2.MaxSD;
 
 import org.chocosolver.pf4cs.SetUpException;
 import org.chocosolver.solver.Model;
@@ -35,216 +37,231 @@ import java.util.List;
 import static org.chocosolver.solver.search.strategy.Search.lastConflict;
 
 /**
- * A regular parser with default and common services
- * Created by cprudhom on 01/09/15.
- * Project: choco-parsers.
+ * A regular parser with default and common services Created by cprudhom on
+ * 01/09/15. Project: choco-parsers.
  */
 public abstract class RegParser implements IParser {
 
-    /**
-     * Name of the parser
-     */
-    private final String parser_cmd;
+	/**
+	 * Name of the parser
+	 */
+	private final String parser_cmd;
 
-    @Argument(required = true, metaVar = "file", usage = "File to parse.")
-    public String instance;
+	@Argument(required = true, metaVar = "file", usage = "File to parse.")
+	public String instance;
 
-    @SuppressWarnings("unused")
-    @Option(name = "-pa", aliases = {"--parser"}, usage = "Parser to use (" +
-            "0: automatic -- based on file name extension (compression is allowed), " +
-            "1: FlatZinc (.fzn)," +
-            "2: XCSP3 (.xml)," +
-            "3: MPS (.mps)," +
-            "4: JSON (.json).")
-    private int pa = 0;
+	@SuppressWarnings("unused")
+	@Option(name = "-pa", aliases = { "--parser" }, usage = "Parser to use ("
+			+ "0: automatic -- based on file name extension (compression is allowed), " + "1: FlatZinc (.fzn),"
+			+ "2: XCSP3 (.xml)," + "3: MPS (.mps)," + "4: JSON (.json).")
+	private int pa = 0;
 
-    @Option(name = "-tl", aliases = {"--time-limit"}, metaVar = "TL", usage = "Time limit.")
-    protected String tl = "-1";
+	@Option(name = "-tl", aliases = { "--time-limit" }, metaVar = "TL", usage = "Time limit.")
+	protected String tl = "-1";
 
-    @Option(name = "-stat", aliases = {"--print-statistics"}, usage = "Print statistics on each solution (default: false).")
-    protected boolean stat = false;
+	@Option(name = "-stat", aliases = {
+			"--print-statistics" }, usage = "Print statistics on each solution (default: false).")
+	protected boolean stat = false;
 
-    @Option(name = "-f", aliases = {"--free-search"}, usage = "Ignore search strategy (default: false). ")
-    protected boolean free = false;
+	@Option(name = "-f", aliases = { "--free-search" }, usage = "Ignore search strategy (default: false). ")
+	protected boolean free = false;
 
-    @Option(name = "-oes", usage ="Override default explanations for sum constraints.")
-    public boolean sumdft = false;
+	@Option(name = "-oes", usage = "Override default explanations for sum constraints.")
+	public boolean sumdft = false;
 
-    @Option(name = "-sumglb", usage ="Learn permanent nogood when sum fails.")
-    public boolean sumglb = false;
+	@Option(name = "-sumglb", usage = "Learn permanent nogood when sum fails.")
+	public boolean sumglb = false;
 
-    @Option(name = "-bb", usage ="Set the search strategy to a black-box one.")
-    public int bbox = 0;
+	@Option(name = "-bb", usage = "Set the search strategy to a black-box one.")
+	public int bbox = 0;
 
-    @Option(name = "-splitsum", usage ="Split sum composed of more than N elements (N = 1000 by default).")
-    public int sum = 1000;
+	@Option(name = "-splitsum", usage = "Split sum composed of more than N elements (N = 1000 by default).")
+	public int sum = 1000;
 
-    @Option(name = "-a", aliases = {"--all"}, usage = "Search for all solutions (default: false).")
-    public boolean all = false;
+	@Option(name = "-a", aliases = { "--all" }, usage = "Search for all solutions (default: false).")
+	public boolean all = false;
 
-    @Option(name = "-p", aliases = {"--nb-cores"}, usage = "Number of cores available for parallel search (default: 1).")
-    protected int nb_cores = 1;
+	@Option(name = "-p", aliases = {
+			"--nb-cores" }, usage = "Number of cores available for parallel search (default: 1).")
+	protected int nb_cores = 1;
 
-    /**
-     * Default time limit, as long, in ms
-     */
-    protected long tl_ = -1;
-    /**
-     * List of listeners
-     */
-    protected List<ParserListener> listeners = new LinkedList<>();
-    /**
-     * Default settings to apply
-     */
-    protected Settings defaultSettings;
+	/**
+	 * Default time limit, as long, in ms
+	 */
+	protected long tl_ = -1;
+	/**
+	 * List of listeners
+	 */
+	protected List<ParserListener> listeners = new LinkedList<>();
+	/**
+	 * Default settings to apply
+	 */
+	protected Settings defaultSettings;
 
-    /**
-     * The resolution portfolio
-     */
-    protected ParallelPortfolio portfolio = new ParallelPortfolio();
+	/**
+	 * The resolution portfolio
+	 */
+	protected ParallelPortfolio portfolio = new ParallelPortfolio();
 
-    /**
-     * Indicates that the resolution stops on user instruction
-     */
-    protected boolean userinterruption = true;
-    /**
-     * Action to do on user interruption
-     */
-    protected final Thread statOnKill;
+	/**
+	 * Indicates that the resolution stops on user instruction
+	 */
+	protected boolean userinterruption = true;
+	/**
+	 * Action to do on user interruption
+	 */
+	protected final Thread statOnKill;
 
-    /**
-     * Execution time
-     */
-    long time;
+	/**
+	 * Execution time
+	 */
+	long time;
 
-    /**
-     * Create a default regular parser
-     * @param parser_cmd name of the parser
-     *
-     */
-    protected RegParser(String parser_cmd) {
-        this.time = System.currentTimeMillis();
-        this.parser_cmd = parser_cmd;
-        statOnKill = actionOnKill();
-        Runtime.getRuntime().addShutdownHook(statOnKill);
-    }
+	/**
+	 * Create a default regular parser
+	 * 
+	 * @param parser_cmd
+	 *            name of the parser
+	 *
+	 */
+	protected RegParser(String parser_cmd) {
+		this.time = System.currentTimeMillis();
+		this.parser_cmd = parser_cmd;
+		statOnKill = actionOnKill();
+		Runtime.getRuntime().addShutdownHook(statOnKill);
+	}
 
-    public abstract char getCommentChar();
+	public abstract char getCommentChar();
 
-    @Override
-    public final void addListener(ParserListener listener) {
-        listeners.add(listener);
-    }
+	@Override
+	public final void addListener(ParserListener listener) {
+		listeners.add(listener);
+	}
 
-    @Override
-    public final void removeListener(ParserListener listener) {
-        listeners.remove(listener);
-    }
+	@Override
+	public final void removeListener(ParserListener listener) {
+		listeners.remove(listener);
+	}
 
-    @Override
-    public void setUp(String... args) throws SetUpException {
-        listeners.forEach(ParserListener::beforeParsingParameters);
-        System.out.printf("%s %s\n", getCommentChar(), Arrays.toString(args));
-        CmdLineParser cmdparser = new CmdLineParser(this);
-        try {
-            cmdparser.parseArgument(args);
-        } catch (CmdLineException e) {
-            System.err.println(e.getMessage());
-            System.err.println(parser_cmd + " [options...] file");
-            cmdparser.printUsage(System.err);
-            System.err.println();
-            return;
-        }
-        cmdparser.getArguments();
-        tl_ = TimeUtils.convertInMilliseconds(tl);
-        listeners.forEach(ParserListener::afterParsingParameters);
-    }
+	@Override
+	public void setUp(String... args) throws SetUpException {
+		listeners.forEach(ParserListener::beforeParsingParameters);
+		System.out.printf("%s %s\n", getCommentChar(), Arrays.toString(args));
+		CmdLineParser cmdparser = new CmdLineParser(this);
+		try {
+			cmdparser.parseArgument(args);
+		} catch (CmdLineException e) {
+			System.err.println(e.getMessage());
+			System.err.println(parser_cmd + " [options...] file");
+			cmdparser.printUsage(System.err);
+			System.err.println();
+			return;
+		}
+		cmdparser.getArguments();
+		tl_ = TimeUtils.convertInMilliseconds(tl);
+		listeners.forEach(ParserListener::afterParsingParameters);
+	}
 
-    @Override
-    public void defineSettings(Settings defaultSettings) {
-        this.defaultSettings = defaultSettings;
-    }
+	@Override
+	public void defineSettings(Settings defaultSettings) {
+		this.defaultSettings = defaultSettings;
+	}
 
-    /**
-     * Create a complementary search on non-decision variables
-     *
-     * @param m a Model
-     */
-    private static void makeComplementarySearch(Model m) {
-        Solver solver = m.getSolver();
-        if(solver.getSearch() != null) {
-            IntVar[] ovars = new IntVar[m.getNbVars()];
-            THashSet<Variable> dvars = new THashSet<>();
-            dvars.addAll(Arrays.asList(solver.getSearch().getVariables()));
-            int k = 0;
-            for (IntVar iv:m.retrieveIntVars(true)) {
-                if (!dvars.contains(iv)) {
-                    ovars[k++] = iv;
-                }
-            }
-            // do not enumerate on the complementary search (greedy assignment)
-            if(k>0) {
-                solver.setSearch(solver.getSearch(), Search.lastConflict(Search.domOverWDegSearch(Arrays.copyOf(ovars, k))));
-            }
-        }
-    }
+	/**
+	 * Create a complementary search on non-decision variables
+	 *
+	 * @param m
+	 *            a Model
+	 */
+	private static void makeComplementarySearch(Model m) {
+		Solver solver = m.getSolver();
+		if (solver.getSearch() != null) {
+			IntVar[] ovars = new IntVar[m.getNbVars()];
+			THashSet<Variable> dvars = new THashSet<>();
+			dvars.addAll(Arrays.asList(solver.getSearch().getVariables()));
+			int k = 0;
+			for (IntVar iv : m.retrieveIntVars(true)) {
+				if (!dvars.contains(iv)) {
+					ovars[k++] = iv;
+				}
+			}
+			// do not enumerate on the complementary search (greedy assignment)
+			if (k > 0) {
+				solver.setSearch(solver.getSearch(),
+						Search.lastConflict(Search.domOverWDegSearch(Arrays.copyOf(ovars, k))));
+			}
+		}
+	}
 
-    @Override
-    public final void configureSearch() {
-        listeners.forEach(ParserListener::beforeConfiguringSearch);
-        Solver solver = portfolio.getModels().get(0).getSolver();
-        if(bbox>0) {
-            switch (bbox) {
-                case 1:
-                    solver.setSearch(Search.domOverWDegSearch(getModel().retrieveIntVars(true)));
-                    break;
-                case 2:
-                    solver.setSearch(new DomOverWDeg(getModel().retrieveIntVars(true), 0, new IntDomainBest()));
-                    break;
-                case 3:
-                    solver.setSearch(Search.activityBasedSearch(getModel().retrieveIntVars(true)));
-                    break;
-                case 4:
-                    ImpactBased ibs = new ImpactBased(getModel().retrieveIntVars(true), 2, 1024, 2048, 0, false);
-                    solver.setSearch(ibs);
-            }
-            solver.setNoGoodRecordingFromRestarts();
-            solver.setLubyRestart(500, new FailCounter(getModel(), 0), 500);
-            solver.setSearch(lastConflict(solver.getSearch()));
+	@Override
+	public final void configureSearch() {
+		listeners.forEach(ParserListener::beforeConfiguringSearch);
+		Solver solver = portfolio.getModels().get(0).getSolver();
+		if (bbox > 0) {
+			switch (bbox) {
+			case 1:
+				solver.setSearch(Search.domOverWDegSearch(getModel().retrieveIntVars(true)));
+				break;
+			case 2:
+				solver.setSearch(new DomOverWDeg(getModel().retrieveIntVars(true), 0, new IntDomainBest()));
+				break;
+			case 3:
+				solver.setSearch(Search.activityBasedSearch(getModel().retrieveIntVars(true)));
+				break;
+			case 4:
+				ImpactBased ibs = new ImpactBased(getModel().retrieveIntVars(true), 2, 1024, 2048, 0, false);
+				solver.setSearch(ibs);
+				break;
 
-        }else if(nb_cores == 1 && free){ // add last conflict
-            solver.setSearch(Search.defaultSearch(solver.getModel()));
-            solver.setNoGoodRecordingFromRestarts();
-            solver.setLubyRestart(500, new FailCounter(getModel(), 0), 500);
-        }
-        for (int i = 0; i < nb_cores; i++) {
-            if (tl_ > -1)portfolio.getModels().get(i).getSolver().limitTime(tl);
-            makeComplementarySearch(portfolio.getModels().get(i));
-        }
-        listeners.forEach(ParserListener::afterConfiguringSearch);
-    }
+			// Added by Giovanni to use counting-based search
+			case 5: // Case OLD_GCC
+				MaxSD maxSD_old = new MaxSD(getModel(), getModel().retrieveIntVars(true), 0);
+				maxSD_old.settEstimatorGCC(ChoiceGCC.OLD_GCC);
+				solver.setSearch(maxSD_old);
+				break;
+			case 6: // Case NEW_GCC
+				MaxSD maxSD_new = new MaxSD(getModel(), getModel().retrieveIntVars(true), 0);
+				maxSD_new.settEstimatorGCC(ChoiceGCC.NEW_GCC);
+				solver.setSearch(maxSD_new);
+			}
+			solver.setNoGoodRecordingFromRestarts();
+			solver.setLubyRestart(500, new FailCounter(getModel(), 0), 500);
+			solver.setSearch(lastConflict(solver.getSearch()));
 
-    @Override
-    public final Model getModel() {
-        Model m = portfolio.getBestModel();
-        if (m == null) {
-            m = portfolio.getModels().get(0);
-        }
-        return m;
-    }
+		} else if (nb_cores == 1 && free) { // add last conflict
+			solver.setSearch(Search.defaultSearch(solver.getModel()));
+			solver.setNoGoodRecordingFromRestarts();
+			solver.setLubyRestart(500, new FailCounter(getModel(), 0), 500);
+		}
+		for (int i = 0; i < nb_cores; i++) {
+			if (tl_ > -1)
+				portfolio.getModels().get(i).getSolver().limitTime(tl);
+			makeComplementarySearch(portfolio.getModels().get(i));
+		}
+		listeners.forEach(ParserListener::afterConfiguringSearch);
+	}
 
-    public final int bestModelID() {
-        Model best = getModel();
-        for (int i = 0; i < nb_cores; i++) {
-            if (best == portfolio.getModels().get(i)) {
-                return i;
-            }
-        }
-        return -1;
-    }
+	@Override
+	public final Model getModel() {
+		Model m = portfolio.getBestModel();
+		if (m == null) {
+			m = portfolio.getModels().get(0);
+		}
+		return m;
+	}
 
-    protected boolean runInTime(){
-        long rtime = (System.currentTimeMillis() - time) ;
-        return tl_ < 0 || rtime < tl_;
-    }
+	public final int bestModelID() {
+		Model best = getModel();
+		for (int i = 0; i < nb_cores; i++) {
+			if (best == portfolio.getModels().get(i)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	protected boolean runInTime() {
+		long rtime = (System.currentTimeMillis() - time);
+		return tl_ < 0 || rtime < tl_;
+	}
 }
