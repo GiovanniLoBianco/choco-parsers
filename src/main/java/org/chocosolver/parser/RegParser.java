@@ -9,8 +9,6 @@
 package org.chocosolver.parser;
 
 import gnu.trove.set.hash.THashSet;
-import version2.ChoiceGCC;
-import version2.MaxSD;
 
 import org.chocosolver.pf4cs.SetUpException;
 import org.chocosolver.solver.Model;
@@ -19,6 +17,9 @@ import org.chocosolver.solver.Settings;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.limits.FailCounter;
 import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.countingbased.CountingBasedStrategy;
+import org.chocosolver.solver.search.strategy.countingbased.CountingEstimators;
+import org.chocosolver.solver.search.strategy.countingbased.MaxSD;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainBest;
 import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
 import org.chocosolver.solver.search.strategy.selectors.variables.ImpactBased;
@@ -197,6 +198,7 @@ public abstract class RegParser implements IParser {
 	public final void configureSearch() {
 		listeners.forEach(ParserListener::beforeConfiguringSearch);
 		Solver solver = portfolio.getModels().get(0).getSolver();
+		solver.showStatistics();
 		if (bbox > 0) {
 			switch (bbox) {
 			case 1:
@@ -214,19 +216,16 @@ public abstract class RegParser implements IParser {
 				break;
 
 			// Added by Giovanni to use counting-based search
-			case 5: // Case OLD_GCC
-				MaxSD maxSD_old = new MaxSD(getModel(), getModel().retrieveIntVars(true), 0);
-				maxSD_old.settEstimatorGCC(ChoiceGCC.OLD_GCC);
-				solver.setSearch(maxSD_old);
-				break;
-			case 6: // Case NEW_GCC
-				MaxSD maxSD_new = new MaxSD(getModel(), getModel().retrieveIntVars(true), 0);
-				maxSD_new.settEstimatorGCC(ChoiceGCC.NEW_GCC);
-				solver.setSearch(maxSD_new);
+			case 5: // Case GCC
+				MaxSD strat = new MaxSD(solver.getModel());
+				strat.setEstimatorAlldifferent(CountingEstimators.ALLDIFFERENT_FDS);
+				strat.setEstimatorGCC(CountingEstimators.GCC_CORRECTION);
+				strat.setUpdateOption("Never Update");
+				solver.setSearch(strat);
 			}
 			solver.setNoGoodRecordingFromRestarts();
 			solver.setLubyRestart(500, new FailCounter(getModel(), 0), 500);
-			solver.setSearch(lastConflict(solver.getSearch()));
+			solver.setSearch(Search.lastConflict(solver.getSearch()));
 
 		} else if (nb_cores == 1 && free) { // add last conflict
 			solver.setSearch(Search.defaultSearch(solver.getModel()));
